@@ -1,0 +1,77 @@
+import os
+import sys
+import logging
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
+from google import genai
+
+# Setup logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Retrieve environment variables
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not TELEGRAM_BOT_TOKEN or not GEMINI_API_KEY:
+    logger.error("Missing required environment variables: TELEGRAM_BOT_TOKEN or GEMINI_API_KEY")
+    sys.exit(1)
+
+# Initialize Google GenAI client
+ai_client = genai.Client(api_key=GEMINI_API_KEY)
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles the /start command."""
+    welcome_text = (
+        "Halo! Bot Gemini siap digunakan.\n"
+        "Kirimkan pesan/pertanyaan teks apa saja untuk dijawab oleh AI."
+    )
+    if update.effective_chat:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text)
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Processes user text messages via Gemini 2.5 Flash."""
+    if not update.message or not update.message.text:
+        return
+
+    user_text = update.message.text
+    chat_id = update.effective_chat.id
+
+    # Send typing status
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+
+    try:
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_text,
+        )
+        reply_text = response.text or "Tidak ada respon teks dari model."
+        await context.bot.send_message(chat_id=chat_id, text=reply_text)
+    except Exception as e:
+        logger.error(f"Gemini API error: {e}")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Terjadi kesalahan saat memproses permintaan: {str(e)}"
+        )
+
+def main() -> None:
+    """Initializes and runs the Telegram bot."""
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    logger.info("Bot is polling...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
