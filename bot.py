@@ -51,7 +51,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         response = ai_client.models.generate_content(
-            model="gemini-4-argon",
+            model="gemini-3.8-flash",
             contents=user_text,
         )
         reply_text = response.text or "Tidak ada respon teks dari model."
