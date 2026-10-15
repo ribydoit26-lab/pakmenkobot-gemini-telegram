@@ -39,7 +39,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Processes user text messages via Gemini 2.5 Flash."""
+    """Processes user text messages via Gemini 3.8 Flash."""
     if not update.message or not update.message.text:
         return
 
